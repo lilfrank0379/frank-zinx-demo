@@ -19,3 +19,15 @@ type Connection struct {
 	// 告知当前连接已经退出（停止）的管道
 	ExitChan chan bool
 }
+
+// NewConnection 初始化Connection
+func NewConnection(conn *net.TCPConn, connID uint32, callbackAPI iface.HandleFunc) *Connection {
+	c := &Connection{
+		Conn:      conn,
+		ConnID:    connID,
+		isClosed:  false,
+		handleAPI: callbackAPI,
+		ExitChan:  make(chan bool, 1),
+	}
+	return c
+}
