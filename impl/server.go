@@ -31,6 +31,24 @@ func NewServer(name string) iface.IServer {
 	return s
 }
 
+// CallbackToClient 定义当前客户端连接的所绑定的handleAPI（目前先写死，后续由用户自定义handle方法）
+func CallbackToClient(conn *net.TCPConn, data []byte, cnt int) error {
+	// 回显数据
+	fmt.Println("[conn handle] CallbackToClient")
+	fmt.Println("server write:", string(data)+"\n")
+
+	for len(data) > 0 {
+		n, err := conn.Write(data)
+		if err != nil {
+			fmt.Println("write error:", err)
+			continue
+		}
+		data = data[n:] // 剩余部分继续写入
+	}
+
+	return nil
+}
+
 // Start 启动服务器
 func (server *Server) Start() {
 	go func() {
@@ -49,6 +67,8 @@ func (server *Server) Start() {
 		}
 
 		// 3 阻塞，等待客户端连接，处理客户端连接的业务（读写）
+		var cid uint32
+		cid = 1
 
 		for {
 			conn, err := listener.AcceptTCP()
@@ -57,31 +77,9 @@ func (server *Server) Start() {
 				continue
 			}
 
-			go func() {
-				for {
-					buf := make([]byte, 512)
-					cnt, err := conn.Read(buf)
-					if err != nil {
-						fmt.Println("error:", err)
-						continue
-					}
-
-					fmt.Println("server read:", string(buf[:cnt]))
-
-					// 回显功能
-					data := buf[:cnt]
-					fmt.Println("server write:", string(data)+"\n")
-
-					for len(data) > 0 {
-						n, err := conn.Write(data)
-						if err != nil {
-							fmt.Println("write error:", err)
-							continue
-						}
-						data = data[n:] // 剩余部分继续写入
-					}
-				}
-			}()
+			dealConn := NewConnection(conn, cid, CallbackToClient)
+			cid++
+			dealConn.Start() // 这里可以用协程启动
 		}
 	}()
 }
